@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+
+  db:
+    image: postgres:13.0-alpine
+    command: bash -c "
+        docker run --name fastapi-postgres -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:alpine
+        && docker exec -it fastapi-postgres bash
+        && psql -U postgres
+        && create database fastapi_database;
+        && create user admin with encrypted password 'admin';
+        && grant all privileges on database fastapi_database to admin;
+        && \c fastapi_database
+        && psql -h localhost -p 5432 postgres
+        && GRANT ALL PRIVILEGES ON SCHEMA public TO admin;
+      "
+
+    volumes:
+      - db_value:/var/lib/postgresql/data/
+
+  api:
+    build: .
+    container_name: fastapi-test-api 
+    command: bash -c "
+        uvicorn main:app
+      "
+    restart: always
+    ports:
+      - 8000:8000
+    depends_on:
+      - db
+
+volumes:
+  db_value:
